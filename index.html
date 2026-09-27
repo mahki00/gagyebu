@@ -530,7 +530,6 @@ function boot(){
     store = makeLocalStore(); store.listen(onData); return;
   }
   firebase.initializeApp(firebaseConfig);
-  firebase.auth().getRedirectResult().catch(e=>showLogin(e.message));
   firebase.auth().onAuthStateChanged(u => {
     S.user = u;
     if (!u) { hideLoad(); showLogin(); return; }
@@ -544,12 +543,43 @@ function boot(){
     });
   });
 }
-function showLogin(msg){ document.getElementById('loginOv').classList.remove('hidden'); document.getElementById('loginErr').innerHTML = msg||''; }
+function showLogin(msg){
+  document.getElementById('loginOv').classList.remove('hidden');
+  const app = inAppBrowser();
+  if (app && !msg) msg = `<b>${app} 안에서는 구글 로그인이 막혀 있어요.</b><br>아래 버튼으로 Safari·크롬에서 열어 주세요.<br><button class="btn btn-primary" style="margin-top:10px" onclick="openExternal()">외부 브라우저로 열기</button><br><span style="font-size:12px;color:var(--text3)">안 되면 화면의 ⋯ 메뉴 → “다른 브라우저로 열기”</span>`;
+  document.getElementById('loginErr').innerHTML = msg||'';
+}
+
+// 카카오톡·네이버·인스타 등 앱 안 브라우저는 구글 로그인이 차단됨 → 외부 브라우저로 보냄
+function inAppBrowser(){
+  const ua = navigator.userAgent;
+  if (/KAKAOTALK/i.test(ua)) return '카카오톡';
+  if (/NAVER\(inapp|NAVER/i.test(ua) && /inapp/i.test(ua)) return '네이버 앱';
+  if (/Instagram/i.test(ua)) return '인스타그램';
+  if (/FBAN|FBAV/i.test(ua)) return '페이스북';
+  if (/Line\//i.test(ua)) return '라인';
+  if (/DaumApps/i.test(ua)) return '다음 앱';
+  if (/Android/i.test(ua) && /; wv\)/i.test(ua)) return '앱';
+  return null;
+}
+function openExternal(){
+  const url = location.href.split('#')[0];
+  if (/KAKAOTALK/i.test(navigator.userAgent)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return; }
+  if (/Android/i.test(navigator.userAgent)) { location.href = 'intent://' + url.replace(/^https?:\/\//,'') + '#Intent;scheme=https;package=com.android.chrome;end'; return; }
+  navigator.clipboard?.writeText(url).then(()=>toast('주소를 복사했어요. Safari에 붙여넣어 주세요'));
+}
+if (!LOCAL && /KAKAOTALK/i.test(navigator.userAgent)) openExternal();   // 카톡이면 바로 외부 브라우저로
+
 function login(){
+  const app = inAppBrowser();
+  if (app) { showLogin(); return; }
   const p = new firebase.auth.GoogleAuthProvider();
+  p.setCustomParameters({ prompt:'select_account' });
   firebase.auth().signInWithPopup(p).catch(e=>{
-    if (/popup/.test(e.code||'')) firebase.auth().signInWithRedirect(p);
-    else showLogin(e.message);
+    const c = e.code || '';
+    if (c==='auth/popup-closed-by-user' || c==='auth/cancelled-popup-request') return;
+    if (c==='auth/popup-blocked') showLogin('팝업이 차단됐어요. 브라우저 주소창의 팝업 허용을 누른 뒤 다시 로그인해 주세요.');
+    else showLogin(`로그인 실패: ${esc(c || e.message)}`);
   });
 }
 function logout(){ if (!LOCAL && confirm('로그아웃할까요?')) firebase.auth().signOut().then(()=>location.reload()); }
