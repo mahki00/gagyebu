@@ -154,6 +154,21 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
 .tx:hover{background:var(--hover);}
 .tx-desc{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tx-meta{font-size:11px;color:var(--text3);white-space:nowrap;}
+.sepgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:640px){.sepgrid{grid-template-columns:1fr;}}
+.sepbox{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface2);}
+.sepbox.corp{background:var(--fix-lt);border-color:#B9CFCD;}
+.sepbox.co{background:var(--co-lt);border-color:#E3B5AB;}
+.sepbox .food-status{color:var(--text2);}
+.sepnote{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6;}
+.badge{font-size:10px;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:500;}
+.badge.corp{background:var(--fix-lt);color:var(--fix);}
+.chip.co.on{background:var(--co);border-color:var(--co);}
+.opt{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:8px 0;line-height:1.4;cursor:pointer;}
+.opt input{margin-top:2px;}
+.tx-sub{display:flex;align-items:center;gap:6px;min-width:0;}
+.tx-date{border:1px solid transparent;border-radius:6px;padding:2px 3px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text2);background:transparent;width:118px;cursor:pointer;}
+.tx-date:hover,.tx-date:focus{border-color:var(--border);background:#fff;outline:none;}
 .tx-amt{text-align:right;font-weight:500;}
 .tx-amt.neg{color:var(--green);}
 .tx-cat{border:1px solid var(--border);border-radius:6px;padding:3px 4px;font-size:12px;width:100%;background:#fff;}
@@ -163,7 +178,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
 .tx-del:hover{color:var(--red);background:var(--red-lt);}
 @media(max-width:640px){
   .tx{grid-template-columns:1fr 96px 22px;grid-template-areas:"d a x" "m s s";row-gap:4px;}
-  .tx>.tx-desc{grid-area:d;}.tx>.tx-meta{grid-area:m;}.tx>.tx-cat{grid-area:s;}.tx>.tx-amt{grid-area:a;}.tx>.tx-del{grid-area:x;}
+  .tx>.tx-desc{grid-area:d;}.tx>.tx-meta,.tx>.tx-sub{grid-area:m;}.tx>.tx-cat{grid-area:s;}.tx>.tx-amt{grid-area:a;}.tx>.tx-del{grid-area:x;}
 }
 .grp{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
 .grp-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--surface2);font-weight:700;}
@@ -280,6 +295,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
     <div class="input-meta">
       <div class="chips" id="whoChips"></div>
       <div class="chips" id="cardChips"></div>
+      <div class="chips" id="catChips"></div>
     </div>
     <textarea class="paste" id="pasteBox" placeholder="예)&#10;2026.09.25  스타벅스 양재점  5,800원&#10;09/26 이마트 평촌점 42,300&#10;어제 배달의민족 23000&#10;&#10;(여러 줄을 한 번에 붙여넣어도 됩니다)"></textarea>
     <div class="input-foot">
@@ -310,6 +326,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
     <div class="weeks" id="weekTbl"></div>
   </section>
 
+  <!-- 법카 · 회사 별도 관리 -->
+  <section class="card">
+    <div class="card-h"><div class="card-t">🗂️ 별도 관리 <span class="card-sub">법카(와이프 평일 식대) · 회사(내 커피·술)</span></div>
+      <button class="btn btn-line btn-sm" onclick="openSettings('sep')">설정</button></div>
+    <div class="sepgrid" id="sepGrid"></div>
+  </section>
+
   <!-- ③ 이달 요약 -->
   <section class="sum-grid" id="sumGrid"></section>
 
@@ -325,6 +348,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
     <div class="filters">
       <select id="fWho"></select>
       <select id="fCat"></select>
+      <select id="fCard"></select>
       <input id="fQ" placeholder="🔍 가맹점 검색">
     </div>
     <div id="ledger"></div>
@@ -355,6 +379,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
     </div>
     <div class="row-inp"><input id="ruleQ" placeholder="🔍 규칙 검색" style="flex:1"></div>
     <div class="rule-list" id="ruleList"></div>
+
+    <h4 id="sec-sep">💳 법카 · 🏢 회사 별도 관리</h4>
+    <div class="hint">두 항목은 “별도 관리” 카드에서 따로 집계돼요. 아래에서 식비 예산·총지출에 넣을지 정할 수 있어요.</div>
+    <label class="opt"><input type="checkbox" id="optCorpFood" onchange="setCfg('includeCorpFood',this.checked)"><span><b>법카의 식재료·외식을 식비 예산에 포함</b><br><span class="hint">켜면(기본) 법카로 쓴 식대가 식재료·외식 예산과 식비 통제 카드에 들어가요.</span></span></label>
+    <label class="opt"><input type="checkbox" id="optCorp" onchange="setCfg('includeCorp',this.checked)"><span><b>법카 사용액 전체를 가계 총지출에 포함</b><br><span class="hint">끄면(기본) 법카는 총지출에서 빠지고 “별도 관리”에만 나와요.</span></span></label>
+    <label class="opt"><input type="checkbox" id="optCo" onchange="setCfg('includeCo',this.checked)"><span><b>“회사” 분류를 가계 총지출에 포함</b><br><span class="hint">회사에서 내가 쓴 커피·술 금액이에요. 식재료·외식 예산에는 항상 들어가지 않아요.</span></span></label>
+    <div class="row-inp"><span style="font-size:13px">법카 월 한도</span><input type="number" id="corpBud" step="10000" placeholder="0 = 없음" style="width:130px" onchange="setCfg('corpBudget',+this.value||0)"><span class="hint">회사 월 예산은 위 “월 예산”의 회사 항목에서 정해요.</span></div>
 
     <h4>👥 구성원 · 결제수단</h4>
     <div class="row-inp"><span style="width:64px;font-size:13px">구성원</span><input id="membersInp" style="flex:1" placeholder="쉼표로 구분"></div>
@@ -428,7 +459,7 @@ const CATS = [
   ['인터넷','통신·구독','고정'],['핸드폰','통신·구독','고정'],['구독','통신·구독','고정'],['AI','통신·구독','고정'],
   ['이모님','아이들','고정'],['아동반','교육','고정'],['성인반','교육','고정'],
   ['용돈','용돈·기부','고정'],['기부','용돈·기부','고정'],
-  ['회사','회사 (별도)','별도'],
+  ['회사','회사 (별도 관리)','별도'],
   ['이체/저축','제외','제외'],
 ];
 const CAT = Object.fromEntries(CATS.map(([s,m,g])=>[s,{mid:m,grp:g}]));
@@ -445,7 +476,7 @@ const DEFAULT_BUDGET = {
 // emails: 로그인 이메일 → 구성원 이름 (Firebase 키에 '.' 불가 → ','로 치환해 저장)
 const emailKey = e => String(e||'').trim().toLowerCase().replace(/\./g,',');
 const DEFAULT_SETTINGS = {
-  members:['남편','아내'], cards:['신한','현대','하나','네이버페이','법카','현금','기타'], cardsV2:true,
+  members:['남편','아내'], cards:['신한','현대','하나','네이버페이','법카','현금','기타'], cardsV2:true, includeCorp:false, includeCorpFood:true, includeCo:true, corpBudget:0,
   emails:{ [emailKey('mahki0.0@gmail.com')]:'남편', [emailKey('kkoongs@gmail.com')]:'아내' },
 };
 
@@ -481,6 +512,7 @@ const LS = k => { try { return localStorage.getItem('gagyebu-'+k); } catch(e){ r
 const LSset = (k,v) => { try { localStorage.setItem('gagyebu-'+k,v); } catch(e){} };
 let curWho = null, curCard = LS('card');   // curWho: 로그인 계정으로 자동 지정, 화면에서 수동 변경 가능(이번 접속 동안만 유지)
 let whoInit = false;
+let curCo = false;   // '🏢 회사 사용' — 이번에 붙여넣는 내역을 회사 분류로 저장 (저장 후 자동 해제)
 try { const v = LS('view'); if (v) S.view = v; } catch(e){}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -643,12 +675,24 @@ function classify(desc){
   for (const r of S.rules) { const k = norm(r.k); if (k && n.includes(k) && CAT[r.c]) return r.c; }
   return null;
 }
-// 법카(회사 카드)로 결제한 내역은 자동으로 '회사'(가계 합계 제외)로 분류. 수동 분류가 있으면 그것을 우선.
+// 법카 = 와이프 카드(평일 식대). 결제수단으로 구분하고, 분류는 가맹점 기준 그대로 함. 식재료·외식은 식비 예산에 포함(설정으로 변경), 총지출은 기본 제외.
+// 회사 = 분류. 회사에서 내가 쓴 커피·술 금액을 따로 보려는 용도 (입력 때 “🏢 회사 사용”을 켜거나 분류에서 선택).
 const CORP_CARD = '법카';
-const autoOf = (desc, card) => card===CORP_CARD ? '회사' : classify(desc);
-const catOf = t => (t.cat && CAT[t.cat]) ? t.cat : (autoOf(t.desc, t.card) || UNC);
+const cfgIncludeCorp = () => !!(S.settings && S.settings.includeCorp === true);       // 기본: 법카는 가계 합계에서 제외
+const cfgIncludeCo   = () => !(S.settings && S.settings.includeCo === false);         // 기본: 회사 분류는 가계 총지출에 포함
+const cfgCorpFood    = () => !(S.settings && S.settings.includeCorpFood === false);   // 기본: 법카의 식재료·외식은 식비 예산에 포함
+const isCorp = t => t.card === CORP_CARD;
+const inHome = t => !isCorp(t) || cfgIncludeCorp();                                   // 가계 '총지출' 집계 대상인 결제수단?
+const inFood = t => !isCorp(t) || cfgCorpFood();                                      // 식재료·외식 '식비 예산' 집계 대상인 결제수단?
+const inMain = t => inHome(t) || (FOOD.includes(t.c) && cfgCorpFood());              // 분류별 보기에서 일반 그룹에 넣을 내역
+const autoOf = (desc) => classify(desc);
+const catOf = t => (t.cat && CAT[t.cat]) ? t.cat : (autoOf(t.desc) || UNC);
 const grpOf = c => c===UNC ? '변동' : CAT[c].grp;
-const counted = c => { const g = grpOf(c); return g!=='별도' && g!=='제외'; };  // 가계 지출 합계에 포함?
+const counted = c => c===UNC ? true : (grpOf(c)!=='제외' && (c!=='회사' || cfgIncludeCo()));   // 분류가 가계 총지출에 들어가나?
+const txCounted = t => inHome(t) && counted(t.c);
+const isFoodHome = t => FOOD.includes(t.c) && inFood(t);                             // 식비 예산 집계 대상
+const COFFEE_RE = /(커피|카페|coffee|cafe|스타벅스|메가|빽다방|이디야|컴포즈|할리스|투썸|폴바셋|찻집|티하우스|다방)/i;
+const DRINK_RE = /(주점|호프|포차|이자카야|술|소주|맥주|와인|막걸리|펍|pub|\bbar\b|위스키|하이볼)/i;
 
 function catOptions(sel, withAuto){
   let h = withAuto ? `<option value="">${esc(withAuto)}</option>` : '';
@@ -801,10 +845,10 @@ function renderPreview(){
   const sel = PV.filter(r=>r.on);
   document.getElementById('pvCount').textContent = `${sel.length}건 · ${won(sel.reduce((a,r)=>a+r.amt,0))}원`;
   const dups = PV.filter(r=>r.dup).length, cc = PV.filter(r=>r.cancel).length;
-  document.getElementById('pvSub').textContent = `${curWho||'사용자 미선택'} · ${curCard||'결제수단 미선택'}` + (dups?` · 중복 ${dups}건 제외`:'') + (cc?` · 취소 ${cc}건 제외`:'');
+  document.getElementById('pvSub').textContent = `${curWho||'사용자 미선택'} · ${curCard||'결제수단 미선택'}` + (curCo?' · 🏢 회사 사용':'') + (curCard===CORP_CARD?' · 법카(식비 '+(cfgCorpFood()?'포함':'제외')+' · 총지출 '+(cfgIncludeCorp()?'포함':'제외')+')':'') + (dups?` · 중복 ${dups}건 제외`:'') + (cc?` · 취소 ${cc}건 제외`:'');
   const btn = document.getElementById('pvSave'); btn.disabled = !sel.length; btn.textContent = `가계부에 ${sel.length}건 기입`;
   document.getElementById('pvList').innerHTML = PV.map((r,i) => {
-    const auto = autoOf(r.desc, curCard);
+    const auto = curCo ? '회사' : autoOf(r.desc);
     return `<div class="pv-row${r.on?'':' off'}">
       <input type="checkbox" ${r.on?'checked':''} onchange="PV[${i}].on=this.checked;renderPreview()">
       <input type="date" value="${r.d}" onchange="PV[${i}].d=this.value">
@@ -821,15 +865,16 @@ function savePreview(){
   const paths = {}; const by = S.user ? S.user.email : 'local';
   sel.forEach(r => {
     const o = { d:r.d, desc:r.desc.trim(), amt:Math.round(r.amt), who:curWho, card:curCard||'', t:Date.now(), by };
-    if (r.cat) o.cat = r.cat;
+    const cat = r.cat || (curCo ? '회사' : '');
+    if (cat) o.cat = cat;
     paths['tx/'+newId()] = o;
   });
   store.update(paths).then(() => {
-    const unc = sel.filter(r=>!r.cat && !autoOf(r.desc, curCard)).length;
+    const unc = sel.filter(r=>!r.cat && !curCo && !autoOf(r.desc)).length;
     toast(`✅ ${sel.length}건 기입 완료` + (unc?` · 미분류 ${unc}건은 아래에서 분류해 주세요`:''));
     // 방금 넣은 달로 이동
     const last = sel[0].d.split('-'); S.y=+last[0]; S.m=+last[1];
-    clearPaste(); renderAll();
+    curCo = false; clearPaste(); renderAll();
   });
 }
 function clearPaste(){ pasteBox.value=''; PV=[]; renderPreview(); document.getElementById('preview').classList.add('hidden'); }
@@ -864,8 +909,10 @@ function renderChips(){
   const M = S.settings.members, C = S.settings.cards;
   if (curWho && !M.includes(curWho)) curWho = null;
   document.getElementById('whoChips').innerHTML = `<span class="chips-lbl">누가</span>` + M.map(m=>`<button class="chip${m===curWho?' on':''}" onclick="setWho('${esc(m)}')">${esc(m)}</button>`).join('');
+  document.getElementById('catChips').innerHTML = `<span class="chips-lbl">분류</span><button class="chip${!curCo?' on':''}" onclick="setCo(false)">자동</button><button class="chip co${curCo?' on':''}" onclick="setCo(true)" title="회사에서 내가 쓴 커피·술 등을 따로 모아 봐요">🏢 회사 사용</button>`;
   document.getElementById('cardChips').innerHTML = `<span class="chips-lbl">결제</span>` + C.map(c=>`<button class="chip${c===curCard?' on':''}" onclick="setCard('${esc(c)}')">${esc(c)}</button>`).join('');
 }
+function setCo(v){ curCo=v; renderChips(); if (PV.length) renderPreview(); }
 function setWho(m){ curWho=m; renderChips(); if (PV.length) renderPreview(); }
 function setCard(c){ curCard = curCard===c ? null : c; LSset('card',curCard||''); renderChips(); if (PV.length) renderPreview(); }
 
@@ -896,15 +943,56 @@ function renderAll(){
   renderChips();
   const list = monthTx(S.y,S.m);
   renderBackupBanner();
-  renderFood(list); renderSummary(list); renderFilters(); renderLedger(list); renderTrend();
+  renderSep(list); renderFood(list); renderSummary(list); renderFilters(); renderLedger(list); renderTrend();
   if (!document.getElementById('setBg').classList.contains('hidden')) { renderTrash(); renderLastBackup(); }
   if (PV.length) renderPreview();
+}
+
+function renderSep(list){
+  const pm = S.m===1 ? [S.y-1,12] : [S.y,S.m-1];
+  const prev = monthTx(...pm);
+  const sum = a => a.reduce((x,t)=>x+t.amt,0);
+  const cmp = (cur, before) => before ? `전월 ${won(before)}원 (${cur-before>=0?'+':'-'}${won(Math.abs(cur-before))})` : '전월 기록 없음';
+
+  // 💳 법카
+  const corp = list.filter(isCorp), corpT = sum(corp);
+  const wd = corp.filter(t=>{ const d=new Date(t.d).getDay(); return d>=1 && d<=5; }), we = corp.filter(t=>!wd.includes(t));
+  const limit = +(S.settings.corpBudget)||0;
+  const cbar = limit ? `<div class="bar"><div class="bar-fill" style="width:${Math.min(100,corpT/limit*100)}%;background:${corpT>limit?'var(--red)':'var(--fix)'}"></div></div>` : '';
+  const corpWho = Object.entries(sumBy(corp, t=>t.who||'미지정')).map(([w,v])=>`${esc(w)} ${man(v)}`).join(' · ');
+  const corpHtml = `<div class="sepbox corp">
+    <div class="food-top"><span class="food-name">💳 법카 <span class="hint">평일 식대</span></span><span class="food-status">식비 ${cfgCorpFood()?'포함':'제외'} · 총지출 ${cfgIncludeCorp()?'포함':'제외'}</span></div>
+    <div class="food-used num">${won(corpT)}<small> ${limit?`/ ${won(limit)}원`:`· ${corp.length}건`}</small></div>${cbar}
+    <div class="food-stats">
+      <div class="fs"><div class="fs-l">평일 ${wd.length}건</div><div class="fs-v num">${won(sum(wd))}</div></div>
+      <div class="fs"><div class="fs-l">주말 ${we.length}건</div><div class="fs-v num" style="color:${we.length?'var(--red)':'inherit'}">${won(sum(we))}</div></div>
+      <div class="fs"><div class="fs-l">1회 평균</div><div class="fs-v num">${corp.length?won(corpT/corp.length):'-'}</div></div>
+    </div>
+    <div class="sepnote">${cmp(corpT, sum(prev.filter(isCorp)))}${corpWho?`<br>👥 ${corpWho}`:''}${!corp.length?'<br>결제수단 “법카”로 입력하면 여기에 모여요.':''}</div>
+  </div>`;
+
+  // 🏢 회사 (내 커피·술)
+  const co = list.filter(t=>t.c==='회사'), coT = sum(co);
+  const coffee = co.filter(t=>COFFEE_RE.test(t.desc)), drink = co.filter(t=>!coffee.includes(t) && DRINK_RE.test(t.desc)), other = co.filter(t=>!coffee.includes(t) && !drink.includes(t));
+  const cob = +S.budget['회사']||0;
+  const obar = cob ? `<div class="bar"><div class="bar-fill" style="width:${Math.min(100,coT/cob*100)}%;background:${coT>cob?'var(--red)':'var(--co)'}"></div></div>` : '';
+  const coHtml = `<div class="sepbox co">
+    <div class="food-top"><span class="food-name">🏢 회사 <span class="hint">내 커피·술</span></span><span class="food-status">총지출 ${cfgIncludeCo()?'포함':'제외'}</span></div>
+    <div class="food-used num">${won(coT)}<small> ${cob?`/ ${won(cob)}원`:`· ${co.length}건`}</small></div>${obar}
+    <div class="food-stats">
+      <div class="fs"><div class="fs-l">☕ 커피·차 ${coffee.length}건</div><div class="fs-v num">${won(sum(coffee))}</div></div>
+      <div class="fs"><div class="fs-l">🍺 술 ${drink.length}건</div><div class="fs-v num">${won(sum(drink))}</div></div>
+      <div class="fs"><div class="fs-l">기타 ${other.length}건</div><div class="fs-v num">${won(sum(other))}</div></div>
+    </div>
+    <div class="sepnote">${cmp(coT, sum(prev.filter(t=>t.c==='회사')))}${!co.length?'<br>입력할 때 “🏢 회사 사용”을 켜면 여기에 모여요.':'<br><span class="hint">커피·술은 가맹점 이름으로 추정해요.</span>'}</div>
+  </div>`;
+  document.getElementById('sepGrid').innerHTML = corpHtml + coHtml;
 }
 
 function renderFood(list){
   const P = monthProgress(S.y,S.m);
   document.getElementById('paceTxt').textContent = P.frac>=1 ? '지난 달 결산' : P.frac===0 ? '아직 시작 전인 달' : `이번 달 ${P.day}일째 · 한 달의 ${Math.round(P.frac*100)}% 지남`;
-  const food = list.filter(t=>FOOD.includes(t.c));
+  const food = list.filter(isFoodHome);
   document.getElementById('foodGrid').innerHTML = FOOD.map(c => {
     const items = food.filter(t=>t.c===c);
     const used = items.reduce((a,t)=>a+t.amt,0);
@@ -951,14 +1039,15 @@ function renderFood(list){
 }
 
 function renderSummary(list){
-  const cnt = list.filter(t=>counted(t.c));
+  const cnt = list.filter(txCounted);
   const total = cnt.reduce((a,t)=>a+t.amt,0);
   const fixed = cnt.filter(t=>grpOf(t.c)==='고정').reduce((a,t)=>a+t.amt,0);
-  const foodT = cnt.filter(t=>FOOD.includes(t.c)).reduce((a,t)=>a+t.amt,0);
+  const foodT = list.filter(isFoodHome).reduce((a,t)=>a+t.amt,0);
   const co = list.filter(t=>t.c==='회사').reduce((a,t)=>a+t.amt,0);
+  const corpT = list.filter(isCorp).reduce((a,t)=>a+t.amt,0);
   const unc = list.filter(t=>t.c===UNC);
   const pm = S.m===1 ? [S.y-1,12] : [S.y,S.m-1];
-  const prevTotal = monthTx(...pm).filter(t=>counted(t.c)).reduce((a,t)=>a+t.amt,0);
+  const prevTotal = monthTx(...pm).filter(txCounted).reduce((a,t)=>a+t.amt,0);
   const diff = total - prevTotal;
   const budTotal = Object.entries(S.budget).filter(([c])=>CAT[c]&&counted(c)).reduce((a,[,v])=>a+(+v||0),0);
   const whoSum = sumBy(cnt, t=>t.who||'미지정');
@@ -967,26 +1056,28 @@ function renderSummary(list){
     <div class="sum"><div class="sum-l">고정 지출</div><div class="sum-v num">${won(fixed)}</div><div class="sum-s">변동 ${won(total-fixed)}</div></div>
     <div class="sum"><div class="sum-l">식비 (식재료+외식)</div><div class="sum-v num">${won(foodT)}</div><div class="sum-s">목표 ${man((+S.budget['식재료']||0)+(+S.budget['외식']||0))}</div></div>
     <div class="sum"><div class="sum-l">사람별</div><div class="sum-v" style="font-size:13px;line-height:1.7">${Object.entries(whoSum).map(([w,v])=>`${esc(w)} <b class="num">${man(v)}</b>`).join('<br>')||'-'}</div></div>
-    <div class="sum click ${unc.length?'alert':''}" onclick="filterUnc()"><div class="sum-l">${unc.length?'⚠️ 미분류 (눌러서 정리)':'미분류'}</div><div class="sum-v num">${unc.length}건</div><div class="sum-s">${unc.length?won(unc.reduce((a,t)=>a+t.amt,0))+'원':'모두 분류됨 👍'}${co?` · 회사 ${man(co)} 별도`:''}</div></div>`;
+    <div class="sum click ${unc.length?'alert':''}" onclick="filterUnc()"><div class="sum-l">${unc.length?'⚠️ 미분류 (눌러서 정리)':'미분류'}</div><div class="sum-v num">${unc.length}건</div><div class="sum-s">${unc.length?won(unc.reduce((a,t)=>a+t.amt,0))+'원':'모두 분류됨 👍'}${(co||corpT)?` · 별도:${corpT?' 법카 '+man(corpT):''}${co?' 회사 '+man(co):''}`:''}</div></div>`;
 }
 function filterUnc(){ document.getElementById('fCat').value=UNC; S.view='date'; renderAll(); document.getElementById('ledger').scrollIntoView({behavior:'smooth',block:'start'}); }
 
 function renderFilters(){
-  const fw = document.getElementById('fWho'), fc = document.getElementById('fCat');
-  const vw = fw.value, vc = fc.value;
+  const fw = document.getElementById('fWho'), fc = document.getElementById('fCat'), fd = document.getElementById('fCard');
+  const vw = fw.value, vc = fc.value, vd = fd.value;
+  fd.innerHTML = `<option value="">전체 결제</option>` + S.settings.cards.map(c=>`<option${c===vd?' selected':''}>${esc(c)}</option>`).join('') + `<option value="__nocorp"${vd==='__nocorp'?' selected':''}>법카 제외</option>`;
   fw.innerHTML = `<option value="">전체 사람</option>` + S.settings.members.map(m=>`<option${m===vw?' selected':''}>${esc(m)}</option>`).join('') + `<option value="__none"${vw==='__none'?' selected':''}>미지정</option>`;
   fc.innerHTML = `<option value="">전체 분류</option><option value="__food"${vc==='__food'?' selected':''}>🍚 식비만</option>` + catOptions(vc).replace(`value="${UNC}"`,`value="${UNC}"`);
   if (!vc) fc.value='';
   document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===S.view));
 }
-['fWho','fCat'].forEach(id=>document.getElementById(id).addEventListener('change',()=>renderLedger(monthTx(S.y,S.m))));
+['fWho','fCat','fCard'].forEach(id=>document.getElementById(id).addEventListener('change',()=>renderLedger(monthTx(S.y,S.m))));
 document.getElementById('fQ').addEventListener('input',()=>renderLedger(monthTx(S.y,S.m)));
 document.querySelectorAll('#viewSeg button').forEach(b=>b.addEventListener('click',()=>{ S.view=b.dataset.v; LSset('view',S.view); renderFilters(); renderLedger(monthTx(S.y,S.m)); }));
 
 function applyFilters(list){
-  const w = document.getElementById('fWho').value, c = document.getElementById('fCat').value, q = norm(document.getElementById('fQ').value);
+  const w = document.getElementById('fWho').value, c = document.getElementById('fCat').value, cd = document.getElementById('fCard').value, q = norm(document.getElementById('fQ').value);
   return list.filter(t => (!w || (w==='__none' ? !t.who : t.who===w))
     && (!c || (c==='__food' ? FOOD.includes(t.c) : t.c===c))
+    && (!cd || (cd==='__nocorp' ? !isCorp(t) : t.card===cd))
     && (!q || norm(t.desc).includes(q)));
 }
 function txRow(t, compact){
@@ -995,8 +1086,8 @@ function txRow(t, compact){
   const dd = +t.d.slice(8), dow = DOW[new Date(t.d).getDay()];
   return `<div class="tx">
     ${compact?`<span class="tx-meta num">${+t.d.slice(5,7)}/${dd}(${dow})</span>`:''}
-    <div class="tx-desc" title="${esc(t.desc)}">${esc(t.desc)}</div>
-    <span class="tx-meta">${esc(meta)}</span>
+    <div class="tx-desc" title="${esc(t.desc)}">${esc(t.desc)}${isCorp(t)?'<span class="badge corp">법카</span>':''}</div>
+    ${compact?`<span class="tx-meta">${esc(meta)}</span>`:`<span class="tx-sub"><input type="date" class="tx-date" value="${t.d}" title="날짜 수정" onchange="changeDate('${t.id}',this.value,this)"><span class="tx-meta">${esc(meta)}</span></span>`}
     ${compact?'':`<select class="tx-cat ${cls}" onchange="changeCat('${t.id}',this.value)">${catOptions(t.c)}</select>`}
     <span class="tx-amt num ${t.amt<0?'neg':''}">${won(t.amt)}</span>
     ${compact?'':`<button class="tx-del" title="삭제" onclick="delTx('${t.id}')">×</button>`}
@@ -1011,16 +1102,17 @@ function renderLedger(all){
     const days = {}; list.forEach(t=>(days[t.d]=days[t.d]||[]).push(t));
     el.innerHTML = Object.keys(days).sort().reverse().map(d => {
       const ts = days[d].sort((a,b)=>(b.t||0)-(a.t||0));
-      const tot = ts.filter(t=>counted(t.c)).reduce((a,t)=>a+t.amt,0);
-      const food = ts.filter(t=>FOOD.includes(t.c)).reduce((a,t)=>a+t.amt,0);
-      return `<div class="day"><div class="day-h"><span>${+d.slice(5,7)}월 ${+d.slice(8)}일 (${DOW[new Date(d).getDay()]})</span><span class="num">${food?`식비 ${won(food)} · `:''}${won(tot)}원</span></div>${ts.map(t=>txRow(t)).join('')}</div>`;
+      const tot = ts.filter(txCounted).reduce((a,t)=>a+t.amt,0);
+      const food = ts.filter(isFoodHome).reduce((a,t)=>a+t.amt,0);
+      const corpS = ts.filter(t=>isCorp(t)).reduce((a,t)=>a+t.amt,0);
+      return `<div class="day"><div class="day-h"><span>${+d.slice(5,7)}월 ${+d.slice(8)}일 (${DOW[new Date(d).getDay()]})</span><span class="num">${corpS?`법카 ${won(corpS)} · `:''}${food?`식비 ${won(food)} · `:''}${won(tot)}원</span></div>${ts.map(t=>txRow(t)).join('')}</div>`;
     }).join('');
     return;
   }
 
   // 분류별: 구분(변동/고정/별도/제외) → 대분류 → 소분류
-  const byC = {}; list.forEach(t=>(byC[t.c]=byC[t.c]||[]).push(t));
-  const sections = [['변동','var','변동 지출'],['고정','fix','고정 지출'],['별도','co','회사 (가계 합계에서 제외)'],['제외','ex','이체·저축 (합계 제외)']];
+  const byC = {}, byCorp = {}; list.forEach(t=>{ const b = inMain(t) ? byC : byCorp; (b[t.c]=b[t.c]||[]).push(t); });
+  const sections = [['변동','var','변동 지출'],['고정','fix','고정 지출'],['별도','co',`회사 · 별도 관리 (총지출 ${cfgIncludeCo()?'포함':'제외'})`],['제외','ex','이체·저축 (합계 제외)']];
   let h = '';
   if (byC[UNC]) h += catGroup('⚠️ 미분류','unc','분류가 필요해요',[UNC],byC);
   for (const [g,tag,label] of sections) {
@@ -1032,24 +1124,27 @@ function renderLedger(all){
       h += catGroup(mid, tag, label, subs, byC);
     });
   }
+  const corpSubs = [UNC, ...CATS.map(c=>c[0])].filter(c=>byCorp[c]);
+  if (corpSubs.length) h += catGroup(cfgCorpFood() ? '💳 법카 (식비 외)' : '💳 법카', 'fix', '별도 관리 · 총지출 제외', corpSubs, byCorp, true);
   el.innerHTML = h;
 }
-function catGroup(title, tag, label, subs, byC){
+function catGroup(title, tag, label, subs, byC, corp){
   const tot = subs.reduce((a,s)=>a+(byC[s]||[]).reduce((x,t)=>x+t.amt,0),0);
-  const bud = subs.reduce((a,s)=>a+(+S.budget[s]||0),0);
+  const bud = corp ? 0 : subs.reduce((a,s)=>a+(+S.budget[s]||0),0);
   let h = `<div class="grp"><div class="grp-h"><span>${esc(title)}<span class="tag ${tag}">${esc(label)}</span></span><span class="num">${won(tot)}${bud?` <span class="hint">/ ${won(bud)}</span>`:''}</span></div>`;
   subs.forEach(s => {
-    const ts = byC[s]||[]; const u = ts.reduce((a,t)=>a+t.amt,0); const b = +S.budget[s]||0;
+    const ts = byC[s]||[]; const u = ts.reduce((a,t)=>a+t.amt,0); const b = corp ? 0 : (+S.budget[s]||0);
+    const key = corp ? 'corp:'+s : s;
     if (!ts.length && !b) return;
     const r = b ? u/b : 0; const over = b && u>b;
-    h += `<div class="cat-row${over?' over':''}" onclick="toggleCat('${esc(s)}')">
-      <span>${S.openCat===s?'▾':'▸'} ${esc(s===UNC?'미분류':s)} <span class="hint">${ts.length}건</span></span>
+    h += `<div class="cat-row${over?' over':''}" onclick="toggleCat('${esc(key)}')">
+      <span>${S.openCat===key?'▾':'▸'} ${esc(s===UNC?'미분류':s)} <span class="hint">${ts.length}건</span></span>
       <div class="cat-bar"><i style="width:${b?Math.min(100,r*100):(u?100:0)}%;${b?'':'background:#ccc'}"></i></div>
       <span class="r num">${won(u)}</span>
       <span class="r num hint">${b?'/ '+won(b):''}</span>
       <span class="r pct num ${over?'c-over':''}">${b?Math.round(r*100)+'%':''}</span>
     </div>`;
-    if (S.openCat===s) h += `<div class="cat-tx">${ts.length? ts.sort((a,b)=>a.d<b.d?1:-1).map(t=>txRow(t,true)).join('') : '<div class="empty">내역 없음</div>'}</div>`;
+    if (S.openCat===key) h += `<div class="cat-tx">${ts.length? ts.sort((a,b)=>a.d<b.d?1:-1).map(t=>txRow(t,true)).join('') : '<div class="empty">내역 없음</div>'}</div>`;
   });
   return h + '</div>';
 }
@@ -1058,12 +1153,12 @@ function toggleCat(s){ S.openCat = S.openCat===s ? null : s; renderLedger(monthT
 function renderTrend(){
   const months = []; let y=S.y, m=S.m;
   for (let i=0;i<6;i++){ months.unshift([y,m]); m--; if(m<1){m=12;y--;} }
-  const rows = months.map(([y,m]) => { const l = monthTx(y,m); const f = c => l.filter(t=>t.c===c).reduce((a,t)=>a+t.amt,0);
-    return { y,m, 식재료:f('식재료'), 외식:f('외식'), 총:l.filter(t=>counted(t.c)).reduce((a,t)=>a+t.amt,0), 회사:f('회사'), n:l.length }; });
+  const rows = months.map(([y,m]) => { const l = monthTx(y,m); const f = c => l.filter(t=>t.c===c && inFood(t)).reduce((a,t)=>a+t.amt,0);
+    return { y,m, 식재료:f('식재료'), 외식:f('외식'), 총:l.filter(txCounted).reduce((a,t)=>a+t.amt,0), 법카:l.filter(isCorp).reduce((a,t)=>a+t.amt,0), 회사:l.filter(t=>t.c==='회사').reduce((a,t)=>a+t.amt,0), n:l.length }; });
   const cell = (v,b) => { const r = b? v/b : 0; const col = !b ? '#ccc' : r>1 ? 'var(--red)' : r>0.9 ? 'var(--amber)' : 'var(--green)';
     return `<td><span class="num">${v?man(v):'-'}</span><span class="trend-bar" style="width:${Math.min(60,r*60)}px;background:${col}"></span></td>`; };
-  document.getElementById('trend').innerHTML = `<table class="tbl"><tr><th>월</th><th>식재료 (${man(S.budget['식재료']||0)})</th><th>외식 (${man(S.budget['외식']||0)})</th><th>총지출</th><th>회사(별도)</th></tr>` +
-    rows.map(r=>`<tr class="${r.y===S.y&&r.m===S.m?'cur':''}"><td>${r.y%100}.${pad(r.m)} <span class="hint">${r.n}건</span></td>${cell(r.식재료,S.budget['식재료'])}${cell(r.외식,S.budget['외식'])}<td class="num">${r.총?won(r.총):'-'}</td><td class="num hint">${r.회사?won(r.회사):'-'}</td></tr>`).join('') + '</table>';
+  document.getElementById('trend').innerHTML = `<table class="tbl"><tr><th>월</th><th>식재료 (${man(S.budget['식재료']||0)})</th><th>외식 (${man(S.budget['외식']||0)})</th><th>총지출</th><th>법카(별도)</th><th>회사(별도)</th></tr>` +
+    rows.map(r=>`<tr class="${r.y===S.y&&r.m===S.m?'cur':''}"><td>${r.y%100}.${pad(r.m)} <span class="hint">${r.n}건</span></td>${cell(r.식재료,S.budget['식재료'])}${cell(r.외식,S.budget['외식'])}<td class="num">${r.총?won(r.총):'-'}</td><td class="num hint">${r.법카?won(r.법카):'-'}</td><td class="num hint">${r.회사?won(r.회사):'-'}</td></tr>`).join('') + '</table>';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1072,10 +1167,10 @@ function renderTrend(){
 let ask = null;
 function changeCat(id, c){
   const t = S.tx[id]; if (!t) return;
-  const auto = autoOf(t.desc, t.card);
+  const auto = autoOf(t.desc);
   const val = (c===UNC || c===auto) ? null : c;   // 자동분류와 같으면 수동값을 저장하지 않음
   store.update({[`tx/${id}/cat`]: val});
-  if (c!==UNC && c!==auto && t.card!==CORP_CARD) {
+  if (c!==UNC && c!==auto && c!=='회사') {   // 회사는 가맹점이 아니라 '누가/어디서' 기준이라 규칙으로 학습하지 않음
     ask = { k: t.desc.replace(/\(주\)|㈜|주식회사/g,'').trim(), c };
     document.getElementById('askK').value = ask.k; document.getElementById('askC').textContent = c;
     document.getElementById('ruleBg').classList.remove('hidden');
@@ -1096,6 +1191,18 @@ function addRule(k,c){
 // 휴지통 — 삭제하면 30일 동안 trash/ 에 보관
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const TRASH_DAYS = 30;
+// 날짜 수정 — 다른 달로 옮기면 그 달로 이동할 수 있는 버튼을 알려줌
+function changeDate(id, v, el){
+  const t = S.tx[id]; if (!t) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { if (el) el.value = t.d; return; }   // 비워서 지운 경우 원래 날짜 유지
+  if (v === t.d) return;
+  const [y,m,d] = v.split('-').map(Number);
+  const moved = y!==S.y || m!==S.m;
+  store.update({[`tx/${id}/d`]: v}).then(() => {
+    if (moved) toast(`📅 ${y}년 ${m}월 ${d}일로 옮겼어요`, {label:`${m}월 보기`, fn:()=>{ S.y=y; S.m=m; S.openCat=null; renderAll(); }});
+    else toast(`📅 ${m}월 ${d}일로 변경`);
+  });
+}
 function delTx(id){
   const t = S.tx[id]; if (!t) return;
   const by = S.user ? (S.user.displayName || S.user.email) : 'local';
@@ -1157,7 +1264,7 @@ function openSettings(sec){
   renderBudget(); renderRules(); renderTrash(); renderLastBackup();
   document.getElementById('membersInp').value = S.settings.members.join(', ');
   document.getElementById('cardsInp').value = S.settings.cards.join(', ');
-  renderEmailBox();
+  renderEmailBox(); renderSepSettings();
   document.getElementById('newRuleC').innerHTML = catOptions('식재료', null).replace(/<option value="미분류"[^>]*>.*?<\/option>/,'');
   if (sec) setTimeout(()=>document.getElementById('sec-'+sec).scrollIntoView({block:'start'}),50);
 }
@@ -1185,6 +1292,13 @@ function editRule(i,f,v){ const rules=S.rules.map(r=>({...r})); rules[i][f]=v.tr
 function moveRule(i,d){ if (i+d<0) return; const rules=[...S.rules]; [rules[i],rules[i+d]]=[rules[i+d],rules[i]]; saveRules(rules).then(()=>setTimeout(renderRules,50)); }
 function delRule(i){ const rules=S.rules.filter((_,j)=>j!==i); saveRules(rules).then(()=>setTimeout(renderRules,50)); }
 function addRuleFromForm(){ const k=document.getElementById('newRuleK').value.trim(), c=document.getElementById('newRuleC').value; if(!k) return; addRule(k,c); document.getElementById('newRuleK').value=''; setTimeout(renderRules,100); }
+function renderSepSettings(){
+  document.getElementById('optCorpFood').checked = cfgCorpFood();
+  document.getElementById('optCorp').checked = cfgIncludeCorp();
+  document.getElementById('optCo').checked = cfgIncludeCo();
+  document.getElementById('corpBud').value = +S.settings.corpBudget || '';
+}
+function setCfg(k, v){ store.update({['settings/'+k]: v}).then(()=>toast('저장됨')); }
 function renderEmailBox(){
   const byName = {}; for (const [k,n] of Object.entries(S.settings.emails||{})) byName[n] = k.replace(/,/g,'.');
   document.getElementById('emailBox').innerHTML = S.settings.members.map((m,i) =>
@@ -1196,7 +1310,7 @@ function saveMembers(){
   if (!members.length) { toast('구성원을 한 명 이상 입력해 주세요'); return; }
   const emails = {};
   document.querySelectorAll('#emailBox input').forEach(inp => { const m=inp.dataset.member, e=inp.value.trim(); if (e && members.includes(m)) emails[emailKey(e)] = m; });
-  store.update({settings:{members,cards,cardsV2:true,emails}}).then(()=>{ toast('저장됨'); setTimeout(renderEmailBox,50); });
+  store.update({'settings/members':members,'settings/cards':cards,'settings/cardsV2':true,'settings/emails':emails}).then(()=>{ toast('저장됨'); setTimeout(renderEmailBox,50); });
 }
 function download(name, text, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 function exportJSON(){
