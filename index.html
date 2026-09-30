@@ -343,6 +343,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
       <div class="seg" id="viewSeg">
         <button data-v="date" class="on">날짜별</button>
         <button data-v="cat">분류별</button>
+        <button data-v="card">결제수단별</button>
       </div>
     </div>
     <div class="filters">
@@ -1098,6 +1099,15 @@ function renderLedger(all){
   const el = document.getElementById('ledger');
   if (!list.length) { el.innerHTML = `<div class="empty">${all.length?'조건에 맞는 내역이 없어요':'이 달에는 아직 내역이 없어요. 위 입력칸에 붙여넣어 보세요.'}</div>`; return; }
 
+  if (S.view==='card') {
+    // 결제수단 → 분류별 금액 (예: 법카로 어느 항목에 얼마를 썼는지)
+    const byCard = {}; list.forEach(t=>{ const k = t.card || '미지정'; (byCard[k]=byCard[k]||[]).push(t); });
+    const order = [...S.settings.cards, '미지정'];
+    const keys = [...new Set([...order.filter(k=>byCard[k]), ...Object.keys(byCard)])];
+    el.innerHTML = keys.map(k => cardGroup(k, byCard[k])).join('');
+    return;
+  }
+
   if (S.view==='date') {
     const days = {}; list.forEach(t=>(days[t.d]=days[t.d]||[]).push(t));
     el.innerHTML = Object.keys(days).sort().reverse().map(d => {
@@ -1145,6 +1155,28 @@ function catGroup(title, tag, label, subs, byC, corp){
       <span class="r pct num ${over?'c-over':''}">${b?Math.round(r*100)+'%':''}</span>
     </div>`;
     if (S.openCat===key) h += `<div class="cat-tx">${ts.length? ts.sort((a,b)=>a.d<b.d?1:-1).map(t=>txRow(t,true)).join('') : '<div class="empty">내역 없음</div>'}</div>`;
+  });
+  return h + '</div>';
+}
+function cardGroup(card, ts){
+  const sum = a => a.reduce((x,t)=>x+t.amt,0);
+  const tot = sum(ts);
+  const isC = card===CORP_CARD;
+  const byCat = {}; ts.forEach(t=>(byCat[t.c]=byCat[t.c]||[]).push(t));
+  const cats = Object.entries(byCat).sort((a,b)=>sum(b[1])-sum(a[1]));
+  const foodT = sum(ts.filter(t=>FOOD.includes(t.c)));
+  let h = `<div class="grp"><div class="grp-h"><span>💳 ${esc(card)}${isC?'<span class="tag fix">별도 관리</span>':''} <span class="hint">${ts.length}건${foodT&&foodT!==tot?` · 식비 ${won(foodT)}`:''}</span></span><span class="num">${won(tot)}</span></div>`;
+  cats.forEach(([c, items]) => {
+    const u = sum(items), key = `card:${card}:${c}`, share = tot ? u/tot : 0;
+    const mid = c===UNC ? '' : CAT[c].mid;
+    h += `<div class="cat-row" onclick="toggleCat('${esc(key)}')">
+      <span>${S.openCat===key?'▾':'▸'} ${esc(c===UNC?'미분류':c)} <span class="hint">${esc(mid&&mid!==c?mid:'')}</span></span>
+      <div class="cat-bar"><i style="width:${Math.max(0,Math.min(100,share*100))}%;background:${c===UNC?'var(--red)':isC?'var(--fix)':'var(--var)'}"></i></div>
+      <span class="r num">${won(u)}</span>
+      <span class="r num hint">${items.length}건</span>
+      <span class="r pct num">${Math.round(share*100)}%</span>
+    </div>`;
+    if (S.openCat===key) h += `<div class="cat-tx">${items.sort((a,b)=>a.d<b.d?1:-1).map(t=>txRow(t,true)).join('')}</div>`;
   });
   return h + '</div>';
 }
